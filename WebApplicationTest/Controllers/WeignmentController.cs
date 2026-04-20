@@ -17,9 +17,9 @@ namespace WebApplicationTest.Controllers
         [HttpGet("read-weight")]
         public IActionResult ReadWeight()
         {
-            var result = _weightService.ReadWeightAuto();
+            var result = _weightService.ReadWeight();
 
-            return Ok(result);   // ✅ always return 200
+            return Ok(result); 
         }
     }
 }
