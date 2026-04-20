@@ -1,0 +1,66 @@
+﻿@{
+    ViewData["Title"] = "Weightment";
+}
+
+<h2>Weightment</h2>
+
+<div style="width:300px;">
+    <label><b>Actual Weight:</b></label>
+    <input type="text" id="weight" class="form-control" readonly />
+</div>
+
+<br />
+
+<button type="button" class="btn btn-primary" onclick="fetchWeight()">
+    Fetch Weight
+</button>
+
+<script>
+              function fetchWeight() {
+
+        console.log("🔄 Fetch button clicked");
+
+        fetch('/api/weight/read-weight')
+            .then(response => {
+                console.log("📡 API called, status:", response.status);
+                return response.json();
+            })
+            .then(data => {
+
+                console.log("✅ Full Response:", data);
+
+                let weightInput = document.getElementById("weight");
+                let status = document.getElementById("status");
+
+                if (data.success) {
+
+                    console.log("📥 Raw Data:", data.data);
+
+                    let clean = data.data.replace(/[^\d.]/g, '');
+
+                    console.log("🎯 Clean Weight:", clean);
+
+                    weightInput.value = clean;
+
+                    if (status)
+                        status.innerText = "✅ Weight fetched successfully";
+
+                } else {
+
+                    console.log("❌ Device Issue:", data.message);
+
+                    weightInput.value = "";
+
+                    if (status)
+                        status.innerText = "❌ " + data.message;
+                }
+            })
+            .catch(error => {
+                console.error("🚨 API ERROR:", error);
+
+                let status = document.getElementById("status");
+                if (status)
+                    status.innerText = "⚠ Server error";
+            });
+    }
+</script>
