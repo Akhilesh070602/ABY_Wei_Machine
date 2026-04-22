@@ -86,107 +86,104 @@ namespace WebApplicationTest.Service
 
     {
 
-        private readonly string _portName = "COM1";
+        private static readonly object _lock = new object();
 
         public WeightResponse ReadWeight()
 
         {
 
-            try
+            lock (_lock) // 🔥 prevents multiple access
 
             {
 
-                using (SerialPort port = new SerialPort(_portName, 9600, Parity.None, 8, StopBits.One))
+                try
 
                 {
 
-                    port.ReadTimeout = 5000;
-
-                    port.Open();
-
-                    string buffer = "";
-
-                    string finalWeight = "";
-
-                    // ✅ Wait up to ~3 seconds like PowerShell
-
-                    for (int i = 0; i < 15; i++)
+                    using (SerialPort port = new SerialPort("COM1", 9600, Parity.None, 8, StopBits.One))
 
                     {
 
-                        buffer += port.ReadExisting();
+                        port.ReadTimeout = 5000;
 
-                        if (!string.IsNullOrEmpty(buffer))
+                        port.Open();
+
+                        string buffer = "";
+
+                        string finalWeight = "";
+
+                        for (int i = 0; i < 15; i++)
 
                         {
 
-                            Console.WriteLine("RAW: " + buffer);
+                            buffer += port.ReadExisting();
 
-                            var match = Regex.Match(buffer, @"\d+(\.\d+)?");
-
-                            if (match.Success)
+                            if (!string.IsNullOrEmpty(buffer))
 
                             {
 
-                                finalWeight = match.Value;
+                                var match = Regex.Match(buffer, @"\d+(\.\d+)?");
 
-                                break;
+                                if (match.Success)
+
+                                {
+
+                                    finalWeight = match.Value;
+
+                                    break;
+
+                                }
 
                             }
 
+                            Thread.Sleep(200);
+
                         }
 
-                        Thread.Sleep(200); // wait for incoming data
+                        if (!string.IsNullOrEmpty(finalWeight))
 
-                    }
+                        {
 
-                    if (!string.IsNullOrEmpty(finalWeight))
+                            return new WeightResponse
 
-                    {
+                            {
+
+                                Success = true,
+
+                                Port = "COM1",
+
+                                Data = finalWeight,
+
+                                Message = "Weight read successfully"
+
+                            };
+
+                        }
 
                         return new WeightResponse
 
                         {
 
-                            Success = true,
+                            Success = false,
 
-                            Port = _portName,
-
-                            Data = finalWeight,
-
-                            Message = "Weight read successfully"
+                            Message = "No data received"
 
                         };
 
                     }
 
+                }
+
+                catch (Exception ex)
+
+                {
                     return new WeightResponse
-
                     {
-
                         Success = false,
-
-                        Message = "No data received from device"
-
+                        Message = ex.ToString() // 🔥 Full details
                     };
 
                 }
-
-            }
-
-            catch (Exception ex)
-
-            {
-
-                return new WeightResponse
-
-                {
-
-                    Success = false,
-
-                    Message = ex.Message
-
-                };
 
             }
 
