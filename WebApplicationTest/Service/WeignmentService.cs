@@ -7,7 +7,7 @@ namespace WebApplicationTest.Service
 {
     public class WeightService
     {
-        private readonly string _portName = "COM1"; // ✅ FIXED PORT
+        private readonly string _portName = "COM1";
 
         public WeightResponse ReadWeight()
         {
@@ -15,7 +15,6 @@ namespace WebApplicationTest.Service
             {
                 using (SerialPort port = new SerialPort(_portName))
                 {
-                    // ✅ MATCH YOUR DEVICE SETTINGS
                     port.BaudRate = 9600;
                     port.DataBits = 8;
                     port.Parity = Parity.None;
@@ -26,10 +25,16 @@ namespace WebApplicationTest.Service
 
                     port.Open();
 
-                    // ✅ wait for machine to send data
-                    Thread.Sleep(2000);
+                    Thread.Sleep(2000); // allow device to send
 
-                    string data = port.ReadLine(); // 🔥 IMPORTANT
+                    string data = "";
+
+                    // 🔥 READ MULTIPLE TIMES (IMPORTANT)
+                    for (int i = 0; i < 5; i++)
+                    {
+                        data += port.ReadExisting();
+                        Thread.Sleep(300);
+                    }
 
                     port.Close();
 
@@ -47,17 +52,9 @@ namespace WebApplicationTest.Service
                     return new WeightResponse
                     {
                         Success = false,
-                        Message = "No data received"
+                        Message = "No data received from machine"
                     };
                 }
-            }
-            catch (TimeoutException)
-            {
-                return new WeightResponse
-                {
-                    Success = false,
-                    Message = "Timeout: No data from machine"
-                };
             }
             catch (Exception ex)
             {
@@ -70,76 +67,3 @@ namespace WebApplicationTest.Service
         }
     }
 }
-//using System.IO.Ports;
-//using WebApplicationTest.Models;
-//using WeightmentAPI.Models;
-
-//namespace WebApplicationTest.Service
-//{
-//    public class WeightService
-//    {
-//        // 👉 BEST PRACTICE: Use fixed COM port (change if needed)
-//        private readonly string _portName = "COM3";
-
-//        public WeightResponse ReadWeight()
-//        {
-//            try
-//            {
-//                using (SerialPort port = new SerialPort(_portName))
-//                {
-//                    // ✅ Proper configuration
-//                    port.BaudRate = 9600;
-//                    port.Parity = Parity.None;
-//                    port.DataBits = 8;
-//                    port.StopBits = StopBits.One;
-//                    port.Handshake = Handshake.None;
-
-//                    port.ReadTimeout = 5000;
-//                    port.WriteTimeout = 2000;
-
-//                    port.Open();
-
-//                    // ✅ Give device time
-//                    Thread.Sleep(2000);
-
-//                    string data = port.ReadLine();
-
-//                    port.Close();
-
-//                    if (!string.IsNullOrWhiteSpace(data))
-//                    {
-//                        return new WeightResponse
-//                        {
-//                            Success = true,
-//                            Port = _portName,
-//                            Data = data.Trim(),
-//                            Message = "Weight read successfully"
-//                        };
-//                    }
-
-//                    return new WeightResponse
-//                    {
-//                        Success = false,
-//                        Message = "No data received from device"
-//                    };
-//                }
-//            }
-//            catch (TimeoutException)
-//            {
-//                return new WeightResponse
-//                {
-//                    Success = false,
-//                    Message = "Timeout: No response from weighing machine"
-//                };
-//            }
-//            catch (Exception ex)
-//            {
-//                return new WeightResponse
-//                {
-//                    Success = false,
-//                    Message = $"Error: {ex.Message}"
-//                };
-//            }
-//        }
-//    }
-//}
