@@ -86,8 +86,9 @@ namespace WebApplicationTest.Service
             {
                 using (SerialPort port = new SerialPort(_portName))
                 {
-                    port.BaudRate = 9600;
-                    port.DataBits = 8;
+                    // ✅ MATCH CMD SETTINGS
+                    port.BaudRate = 1200;      // 🔥 CHANGED
+                    port.DataBits = 7;         // 🔥 CHANGED
                     port.Parity = Parity.None;
                     port.StopBits = StopBits.One;
                     port.Handshake = Handshake.None;
@@ -96,12 +97,7 @@ namespace WebApplicationTest.Service
 
                     port.Open();
 
-                    Thread.Sleep(1000);
-
-                    // 🔥 If machine requires trigger, uncomment:
-                    // port.Write("W\r\n");
-
-                    Thread.Sleep(500);
+                    Thread.Sleep(2000);
 
                     string finalWeight = "";
 
@@ -118,7 +114,7 @@ namespace WebApplicationTest.Service
                             finalWeight = match.Value;
                         }
 
-                        Thread.Sleep(300);
+                        Thread.Sleep(500);
                     }
 
                     port.Close();
