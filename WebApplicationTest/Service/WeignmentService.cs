@@ -74,6 +74,8 @@ using System.IO.Ports;
 
 using System.Text.RegularExpressions;
 
+using System.Threading;
+
 using WeightmentAPI.Models;
 
 namespace WebApplicationTest.Service
@@ -98,25 +100,47 @@ namespace WebApplicationTest.Service
 
                 {
 
-                    port.Handshake = Handshake.None;
-
                     port.ReadTimeout = 5000;
-
-                    port.NewLine = "\r\n"; // adjust if needed
 
                     port.Open();
 
-                    // ✅ Read ONE full line instead of random chunks
+                    string buffer = "";
 
-                    string rawData = port.ReadLine();
+                    string finalWeight = "";
 
-                    Console.WriteLine("RAW: " + rawData);
+                    // ✅ Wait up to ~3 seconds like PowerShell
 
-                    // ✅ Extract numeric weight
+                    for (int i = 0; i < 15; i++)
 
-                    var match = Regex.Match(rawData, @"\d+(\.\d+)?");
+                    {
 
-                    if (match.Success)
+                        buffer += port.ReadExisting();
+
+                        if (!string.IsNullOrEmpty(buffer))
+
+                        {
+
+                            Console.WriteLine("RAW: " + buffer);
+
+                            var match = Regex.Match(buffer, @"\d+(\.\d+)?");
+
+                            if (match.Success)
+
+                            {
+
+                                finalWeight = match.Value;
+
+                                break;
+
+                            }
+
+                        }
+
+                        Thread.Sleep(200); // wait for incoming data
+
+                    }
+
+                    if (!string.IsNullOrEmpty(finalWeight))
 
                     {
 
@@ -128,7 +152,7 @@ namespace WebApplicationTest.Service
 
                             Port = _portName,
 
-                            Data = match.Value,
+                            Data = finalWeight,
 
                             Message = "Weight read successfully"
 
@@ -142,43 +166,11 @@ namespace WebApplicationTest.Service
 
                         Success = false,
 
-                        Message = "No valid weight found in response"
+                        Message = "No data received from device"
 
                     };
 
                 }
-
-            }
-
-            catch (TimeoutException)
-
-            {
-
-                return new WeightResponse
-
-                {
-
-                    Success = false,
-
-                    Message = "⏱ Timeout: No data received from device"
-
-                };
-
-            }
-
-            catch (UnauthorizedAccessException)
-
-            {
-
-                return new WeightResponse
-
-                {
-
-                    Success = false,
-
-                    Message = "❌ COM1 is being used by another application"
-
-                };
 
             }
 
@@ -203,3 +195,4 @@ namespace WebApplicationTest.Service
     }
 
 }
+
