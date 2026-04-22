@@ -82,60 +82,69 @@ namespace WebApplicationTest.Service
 
         public WeightResponse ReadWeight()
         {
+            SerialPort port = null;
+
             try
             {
-                using (SerialPort port = new SerialPort(_portName))
+                port = new SerialPort(_portName);
+
+                // ✅ MATCH DEVICE SETTINGS
+                port.BaudRate = 1200;
+                port.DataBits = 7;
+                port.Parity = Parity.None;
+                port.StopBits = StopBits.One;
+                port.Handshake = Handshake.None;
+
+                port.ReadTimeout = 3000;
+
+                port.Open();
+
+                Console.WriteLine("✅ Port opened");
+
+                Thread.Sleep(2000);
+
+                string finalWeight = "";
+
+                for (int i = 0; i < 5; i++)
                 {
-                    // ✅ MATCH CMD SETTINGS
-                    port.BaudRate = 1200;      // 🔥 CHANGED
-                    port.DataBits = 7;         // 🔥 CHANGED
-                    port.Parity = Parity.None;
-                    port.StopBits = StopBits.One;
-                    port.Handshake = Handshake.None;
+                    string raw = port.ReadExisting();
 
-                    port.ReadTimeout = 3000;
+                    Console.WriteLine("RAW: " + raw);
 
-                    port.Open();
+                    var match = Regex.Match(raw, @"\d+(\.\d+)?");
 
-                    Thread.Sleep(2000);
-
-                    string finalWeight = "";
-
-                    for (int i = 0; i < 5; i++)
+                    if (match.Success)
                     {
-                        string raw = port.ReadExisting();
-
-                        Console.WriteLine("RAW: " + raw);
-
-                        var match = Regex.Match(raw, @"\d+(\.\d+)?");
-
-                        if (match.Success)
-                        {
-                            finalWeight = match.Value;
-                        }
-
-                        Thread.Sleep(500);
+                        finalWeight = match.Value;
                     }
 
-                    port.Close();
+                    Thread.Sleep(500);
+                }
 
-                    if (!string.IsNullOrEmpty(finalWeight))
-                    {
-                        return new WeightResponse
-                        {
-                            Success = true,
-                            Port = _portName,
-                            Data = finalWeight,
-                            Message = "Weight read successfully"
-                        };
-                    }
-
+                if (!string.IsNullOrEmpty(finalWeight))
+                {
                     return new WeightResponse
                     {
-                        Success = false,
-                        Message = "No valid weight found"
+                        Success = true,
+                        Port = _portName,
+                        Data = finalWeight,
+                        Message = "Weight read successfully"
                     };
                 }
+
+                return new WeightResponse
+                {
+                    Success = false,
+                    Message = "No valid weight found"
+                };
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return new WeightResponse
+                {
+                    Success = false,
+                    Message = "❌ COM1 is being used by another application"
+                };
             }
             catch (Exception ex)
             {
@@ -144,6 +153,11 @@ namespace WebApplicationTest.Service
                     Success = false,
                     Message = ex.Message
                 };
+            }
+            finally
+            {
+                if (port != null && port.IsOpen)
+                    port.Close();
             }
         }
     }
